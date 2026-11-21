@@ -2,5 +2,7 @@
   "name": "MoneyCircle",
   "description": "Reward Management, Coin Wallet, UPI Payment Gateway, Day Circle Plans, Withdrawal Settlement & Help Desk Platform.",
   "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }

@@ -1,6 +1,7 @@
 import React, {useState} from 'react';
 import {Download, Smartphone, X} from 'lucide-react';
 import {usePWAInstall} from '../hooks/usePWAInstall';
+import {LIVE_WEBSITE_URL} from '../lib/siteConfig';
 
 interface PWAInstallButtonProps {
   label?: string;
@@ -64,8 +65,8 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({
             </div>
             <p className="mt-3 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
               {isIOS
-                ? 'Open MoneyCircle in Safari, tap the Share button in the toolbar, and choose "Add to Home Screen" for full-screen app mode.'
-                : 'MoneyCircle is a Progressive Web App compatible with Android Chrome & Edge. Tap the browser menu (⋮) and select "Install app" or "Add to Home screen" to launch MoneyCircle as a standalone Android application.'}
+                ? `Open ${LIVE_WEBSITE_URL} in Safari, tap the Share button in the toolbar, and choose "Add to Home Screen" for full-screen app mode.`
+                : `MoneyCircle (${LIVE_WEBSITE_URL}) is a Progressive Web App compatible with Android Chrome & Edge. Tap the browser menu (⋮) and select "Install app" or "Add to Home screen" to launch MoneyCircle as a standalone Android application.`}
             </p>
             <button
               type="button"

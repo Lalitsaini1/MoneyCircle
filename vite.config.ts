@@ -30,8 +30,30 @@ export default defineConfig(() => {
           theme_color: '#0f172a',
           background_color: '#f8fafc',
           display: 'standalone',
+          orientation: 'portrait-primary',
           start_url: '/',
           scope: '/',
+          categories: ['finance', 'productivity'],
+          shortcuts: [
+            {
+              name: 'Day Circle Plans',
+              short_name: 'Plans',
+              url: '/plans',
+              icons: [{src: '/pwa-192x192.png', sizes: '192x192', type: 'image/png'}],
+            },
+            {
+              name: 'Coin Conversion Rates',
+              short_name: 'Rates',
+              url: '/rates',
+              icons: [{src: '/pwa-192x192.png', sizes: '192x192', type: 'image/png'}],
+            },
+            {
+              name: 'Help & Support',
+              short_name: 'Support',
+              url: '/support',
+              icons: [{src: '/pwa-192x192.png', sizes: '192x192', type: 'image/png'}],
+            },
+          ],
           icons: [
             {
               src: '/pwa-192x192.png',

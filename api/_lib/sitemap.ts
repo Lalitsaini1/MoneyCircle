@@ -57,7 +57,12 @@ export function resolveSiteOrigin(req?: IncomingMessage): string {
     return `https://${vercelUrl.replace(/^https?:\/\//, '').replace(/\/+$/, '')}`;
   }
 
-  return 'https://moneycircle.vercel.app';
+  const siteEnvUrl = process.env.VITE_SITE_URL?.trim();
+  if (siteEnvUrl && /^https?:\/\//i.test(siteEnvUrl) && !siteEnvUrl.includes('MY_APP_URL')) {
+    return siteEnvUrl.replace(/\/+$/, '');
+  }
+
+  return 'https://moneycircle-public.vercel.app';
 }
 
 export function generateSitemapXml(

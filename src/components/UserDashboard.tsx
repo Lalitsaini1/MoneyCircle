@@ -29,6 +29,7 @@ import {
   Moon,
   QrCode,
   Send,
+  Share2,
   ShieldAlert,
   ShieldCheck,
   Sun,
@@ -40,6 +41,11 @@ import {
 import {QRCodeSVG} from 'qrcode.react';
 import {auth, db, handleFirestoreError, makeSafeId, OperationType} from '../lib/firebase';
 import {t} from '../lib/i18n';
+import {
+  buildReferralLink,
+  getActiveSiteOrigin,
+  getAuthActionCodeSettings,
+} from '../lib/siteConfig';
 import type {
   AppNotification,
   CoinPackage,
@@ -207,7 +213,18 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
   const handleResendVerification = async () => {
     if (!auth.currentUser) return;
     try {
-      await sendEmailVerification(auth.currentUser);
+      try {
+        await sendEmailVerification(auth.currentUser, getAuthActionCodeSettings('authAction=verified'));
+      } catch (verifyErr) {
+        if ((verifyErr as {code?: string})?.code === 'auth/unauthorized-continue-uri') {
+          await sendEmailVerification(
+            auth.currentUser,
+            getAuthActionCodeSettings('authAction=verified', getActiveSiteOrigin()),
+          );
+        } else {
+          throw verifyErr;
+        }
+      }
       showToast('ok', 'Verification email sent. Check your inbox.');
     } catch (err) {
       showToast('err', err instanceof Error ? err.message : 'Unable to send email.');
@@ -1586,28 +1603,74 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
           {/* TAB: REFERRALS */}
           {activeTab === 'referrals' && (
             <div className="space-y-6">
-              <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div>
-                  <h2 className="font-display text-lg font-bold">Member Referral Program</h2>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                    Share your code below. Verified referrals earn {settings.referralBonusCoins} bonus Coins once approved.
-                  </p>
+              <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div>
+                    <h2 className="font-display text-lg font-bold">Member Referral Program</h2>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                      Share your referral code or invite link below. Verified referrals earn {settings.referralBonusCoins} bonus Coins once approved.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 px-4 py-2 font-mono text-sm font-bold">
+                      {userProfile.referralCode}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard?.writeText(userProfile.referralCode);
+                        showToast('ok', `Referral code ${userProfile.referralCode} copied!`);
+                      }}
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 text-xs font-semibold cursor-pointer"
+                    >
+                      <Copy className="w-3.5 h-3.5" />
+                      <span>Copy Code</span>
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 px-4 py-2 font-mono text-sm font-bold">
-                    {userProfile.referralCode}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      navigator.clipboard?.writeText(userProfile.referralCode);
-                      showToast('ok', `Referral code ${userProfile.referralCode} copied!`);
-                    }}
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 text-xs font-semibold cursor-pointer"
-                  >
-                    <Copy className="w-3.5 h-3.5" />
-                    <span>Copy Code</span>
-                  </button>
+
+                <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="min-w-0 flex-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 px-3.5 py-2 font-mono text-xs text-slate-700 dark:text-slate-300 truncate">
+                    {buildReferralLink(userProfile.referralCode)}
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const link = buildReferralLink(userProfile.referralCode);
+                        navigator.clipboard?.writeText(link);
+                        showToast('ok', 'Referral invite link copied!');
+                      }}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 px-3.5 py-2 text-xs font-semibold cursor-pointer"
+                    >
+                      <Copy className="w-3.5 h-3.5" />
+                      <span>Copy Link</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const shareUrl = buildReferralLink(userProfile.referralCode);
+                        if (navigator.share) {
+                          try {
+                            await navigator.share({
+                              title: 'Join MoneyCircle',
+                              text: `Join MoneyCircle using my referral code ${userProfile.referralCode}`,
+                              url: shareUrl,
+                            });
+                            return;
+                          } catch {
+                            // User cancelled or share unavailable; fallback to copy
+                          }
+                        }
+                        navigator.clipboard?.writeText(shareUrl);
+                        showToast('ok', 'Share link copied to clipboard!');
+                      }}
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 dark:bg-emerald-600 hover:bg-slate-800 dark:hover:bg-emerald-500 text-white px-3.5 py-2 text-xs font-semibold cursor-pointer"
+                    >
+                      <Share2 className="w-3.5 h-3.5" />
+                      <span>Share</span>
+                    </button>
+                  </div>
                 </div>
               </div>
 

@@ -1,5 +1,6 @@
 import {useEffect} from 'react';
 import {buildSeoMetadata} from '../lib/seo';
+import {getActiveSiteOrigin} from '../lib/siteConfig';
 import type {DayPlan, Language} from '../types/models';
 
 function upsertMeta(attr: 'name' | 'property', key: string, content: string): void {
@@ -37,7 +38,7 @@ export function useDocumentSeo(params: {
   const {viewMode, pathname, lang, plans} = params;
 
   useEffect(() => {
-    const origin = window.location.origin;
+    const origin = getActiveSiteOrigin();
     const seo = buildSeoMetadata({
       viewMode,
       pathname,

@@ -12,6 +12,7 @@ import {
 import {t} from '../lib/i18n';
 import {DEFAULT_PLANS} from '../lib/seedData';
 import {normalizePublicRoute, type PublicRoutePath} from '../lib/seo';
+import {LIVE_WEBSITE_URL} from '../lib/siteConfig';
 import type {CoinPackage, DayPlan, Language, ThemeMode} from '../types/models';
 import {PWAInstallButton} from './PWAInstallButton';
 
@@ -538,11 +539,33 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
       <footer className="border-t border-slate-200 dark:border-slate-800 py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500 dark:text-slate-400">
-          <div>© {new Date().getFullYear()} MoneyCircle. {lang === 'hi' ? 'सभी अधिकार सुरक्षित।' : 'All rights reserved.'}</div>
-          <div className="flex items-center gap-4">
-            <span>support@moneycircle.app</span>
+          <div className="flex flex-wrap items-center gap-3">
+            <span>© {new Date().getFullYear()} MoneyCircle. {lang === 'hi' ? 'सभी अधिकार सुरक्षित।' : 'All rights reserved.'}</span>
             <span aria-hidden="true">·</span>
-            <span>{lang === 'hi' ? 'कोई गारंटीड निवेश रिटर्न नहीं' : 'No guaranteed investment returns'}</span>
+            <a
+              href={LIVE_WEBSITE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-slate-900 dark:hover:text-white underline underline-offset-2"
+            >
+              moneycircle-public.vercel.app
+            </a>
+          </div>
+          <div className="flex flex-wrap items-center gap-4">
+            <a href="/plans" onClick={(e) => handleRouteClick(e, '/plans', 'plans')} className="hover:text-slate-900 dark:hover:text-white">
+              {t(lang, 'navPlans')}
+            </a>
+            <a href="/rates" onClick={(e) => handleRouteClick(e, '/rates', 'rates')} className="hover:text-slate-900 dark:hover:text-white">
+              {t(lang, 'navRates')}
+            </a>
+            <a href="/security" onClick={(e) => handleRouteClick(e, '/security', 'security')} className="hover:text-slate-900 dark:hover:text-white">
+              {t(lang, 'navSecurity')}
+            </a>
+            <a href="/support" onClick={(e) => handleRouteClick(e, '/support', 'support')} className="hover:text-slate-900 dark:hover:text-white">
+              {t(lang, 'navSupport')}
+            </a>
+            <span aria-hidden="true">·</span>
+            <span>support@moneycircle.app</span>
           </div>
         </div>
       </footer>

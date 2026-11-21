@@ -9,12 +9,14 @@ import {
 } from 'firebase/auth';
 import {AlertCircle, CheckCircle2, Mail, Shield, X} from 'lucide-react';
 import {auth, googleProvider} from '../lib/firebase';
+import {getActiveSiteOrigin, getAuthActionCodeSettings} from '../lib/siteConfig';
 import type {Language} from '../types/models';
 
 interface AuthModalProps {
   isOpen: boolean;
   initialMode: 'login' | 'register' | 'forgot';
   lang: Language;
+  initialReferralCode?: string;
   onClose: () => void;
   onReferralCodeCapture: (code: string) => void;
 }
@@ -23,6 +25,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   isOpen,
   initialMode,
   lang,
+  initialReferralCode = '',
   onClose,
   onReferralCodeCapture,
 }) => {
@@ -30,7 +33,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [referralInput, setReferralInput] = useState('');
+  const [referralInput, setReferralInput] = useState(initialReferralCode);
   const [busy, setBusy] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [infoMsg, setInfoMsg] = useState('');
@@ -39,7 +42,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setMode(initialMode);
     setErrorMsg('');
     setInfoMsg('');
-  }, [initialMode, isOpen]);
+    if (initialReferralCode) {
+      setReferralInput(initialReferralCode);
+    }
+  }, [initialMode, isOpen, initialReferralCode]);
 
   if (!isOpen) return null;
 
@@ -99,7 +105,18 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         if (displayName.trim()) {
           await updateProfile(cred.user, {displayName: displayName.trim()});
         }
-        await sendEmailVerification(cred.user);
+        try {
+          await sendEmailVerification(cred.user, getAuthActionCodeSettings('authAction=verified'));
+        } catch (verifyErr) {
+          if ((verifyErr as {code?: string})?.code === 'auth/unauthorized-continue-uri') {
+            await sendEmailVerification(
+              cred.user,
+              getAuthActionCodeSettings('authAction=verified', getActiveSiteOrigin()),
+            );
+          } else {
+            throw verifyErr;
+          }
+        }
         setInfoMsg(
           lang === 'hi'
             ? 'खाता बन गया! कृपया अपना ईमेल सत्यापित करें।'
@@ -107,7 +124,19 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         );
         onClose();
       } else {
-        await sendPasswordResetEmail(auth, email.trim());
+        try {
+          await sendPasswordResetEmail(auth, email.trim(), getAuthActionCodeSettings('authAction=reset'));
+        } catch (resetErr) {
+          if ((resetErr as {code?: string})?.code === 'auth/unauthorized-continue-uri') {
+            await sendPasswordResetEmail(
+              auth,
+              email.trim(),
+              getAuthActionCodeSettings('authAction=reset', getActiveSiteOrigin()),
+            );
+          } else {
+            throw resetErr;
+          }
+        }
         setInfoMsg(
           lang === 'hi'
             ? 'पासवर्ड रीसेट लिंक आपके ईमेल पर भेजा गया है।'

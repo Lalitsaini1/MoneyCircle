@@ -69,7 +69,13 @@ export default function App() {
     open: false,
     mode: 'login',
   });
-  const [pendingReferralCode, setPendingReferralCode] = useState<string>('');
+  const [pendingReferralCode, setPendingReferralCode] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      const refParam = new URLSearchParams(window.location.search).get('ref')?.trim().toUpperCase();
+      return refParam && /^[A-Z0-9_-]{4,24}$/.test(refParam) ? refParam : '';
+    }
+    return '';
+  });
 
   // Public catalog state
   const [plans, setPlans] = useState<DayPlan[]>([]);
@@ -572,6 +578,7 @@ export default function App() {
         isOpen={authModal.open}
         initialMode={authModal.mode}
         lang={lang}
+        initialReferralCode={pendingReferralCode}
         onClose={() => setAuthModal((prev) => ({...prev, open: false}))}
         onReferralCodeCapture={(code) => setPendingReferralCode(code)}
       />
