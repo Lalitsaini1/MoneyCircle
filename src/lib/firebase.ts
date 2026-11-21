@@ -1,11 +1,35 @@
-import {initializeApp} from 'firebase/app';
+import {getApp, getApps, initializeApp, type FirebaseOptions} from 'firebase/app';
 import {getAuth, GoogleAuthProvider} from 'firebase/auth';
 import {doc, getDocFromServer, getFirestore} from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
 
-const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
-export const auth = getAuth(app);
+const readEnv = (key: string): string => {
+  const val = typeof import.meta !== 'undefined' ? import.meta.env?.[key] : undefined;
+  return typeof val === 'string' ? val.trim() : '';
+};
+
+const resolvedFirebaseConfig: FirebaseOptions = {
+  apiKey: readEnv('VITE_FIREBASE_API_KEY') || firebaseConfig.apiKey,
+  authDomain: readEnv('VITE_FIREBASE_AUTH_DOMAIN') || firebaseConfig.authDomain,
+  projectId: readEnv('VITE_FIREBASE_PROJECT_ID') || firebaseConfig.projectId,
+  storageBucket: readEnv('VITE_FIREBASE_STORAGE_BUCKET') || firebaseConfig.storageBucket,
+  messagingSenderId:
+    readEnv('VITE_FIREBASE_MESSAGING_SENDER_ID') || firebaseConfig.messagingSenderId,
+  appId: readEnv('VITE_FIREBASE_APP_ID') || firebaseConfig.appId,
+  ...(readEnv('VITE_FIREBASE_MEASUREMENT_ID') || firebaseConfig.measurementId
+    ? {measurementId: readEnv('VITE_FIREBASE_MEASUREMENT_ID') || firebaseConfig.measurementId}
+    : {}),
+};
+
+const resolvedDatabaseId =
+  readEnv('VITE_FIREBASE_FIRESTORE_DATABASE_ID') || firebaseConfig.firestoreDatabaseId;
+
+export const FIREBASE_PROJECT_ID = resolvedFirebaseConfig.projectId || firebaseConfig.projectId;
+export const FIREBASE_AUTH_DOMAIN = resolvedFirebaseConfig.authDomain || firebaseConfig.authDomain;
+
+export const firebaseApp = getApps().length > 0 ? getApp() : initializeApp(resolvedFirebaseConfig);
+export const db = getFirestore(firebaseApp, resolvedDatabaseId);
+export const auth = getAuth(firebaseApp);
 export const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({prompt: 'select_account'});
 

@@ -8,7 +8,7 @@ import {
   updateProfile,
 } from 'firebase/auth';
 import {AlertCircle, CheckCircle2, Mail, Shield, X} from 'lucide-react';
-import {auth, googleProvider} from '../lib/firebase';
+import {auth, FIREBASE_PROJECT_ID, googleProvider} from '../lib/firebase';
 import {getActiveSiteOrigin, getAuthActionCodeSettings} from '../lib/siteConfig';
 import type {Language} from '../types/models';
 
@@ -51,6 +51,20 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
   const formatFirebaseAuthError = (err: unknown): string => {
     const code = (err as {code?: string})?.code || '';
+    if (code === 'auth/unauthorized-domain') {
+      const host =
+        typeof window !== 'undefined' && window.location?.hostname
+          ? window.location.hostname
+          : 'moneycircle-public.vercel.app';
+      return lang === 'hi'
+        ? `डोमेन "${host}" Firebase Authentication में अधिकृत नहीं है। Firebase Console → Project "${FIREBASE_PROJECT_ID}" → Authentication → Settings → Authorized domains में "${host}" जोड़ें।`
+        : `Domain "${host}" is not authorized for Firebase Authentication. Add "${host}" in Firebase Console → Project "${FIREBASE_PROJECT_ID}" → Authentication → Settings → Authorized domains.`;
+    }
+    if (code === 'auth/popup-blocked') {
+      return lang === 'hi'
+        ? 'ब्राउज़र ने साइन-इन पॉपअप ब्लॉक कर दिया है। कृपया इस साइट के लिए पॉपअप की अनुमति दें और पुनः प्रयास करें।'
+        : 'Sign-in popup was blocked by your browser. Please allow popups for this site and try again.';
+    }
     if (code === 'auth/operation-not-allowed') {
       return lang === 'hi'
         ? 'ईमेल/पासवर्ड साइन-इन Firebase Console में सक्षम नहीं है। कृपया Google साइन-इन का उपयोग करें या Firebase Console → Authentication → Sign-in method में Email/Password सक्षम करें।'
