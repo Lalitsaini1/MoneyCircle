@@ -4,31 +4,81 @@ import {doc, getDocFromServer, getFirestore} from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
 
 const readEnv = (key: string): string => {
-  const val = typeof import.meta !== 'undefined' ? import.meta.env?.[key] : undefined;
+  const val = typeof import.meta !== 'undefined' ? (import.meta.env as Record<string, unknown>)?.[key] : undefined;
   return typeof val === 'string' ? val.trim() : '';
 };
 
+const readFirebaseEnv = (suffix: string): string =>
+  readEnv(`VITE_FIREBASE_${suffix}`) ||
+  readEnv(`NEXT_PUBLIC_FIREBASE_${suffix}`) ||
+  readEnv(`REACT_APP_FIREBASE_${suffix}`);
+
+const envProjectId = readFirebaseEnv('PROJECT_ID');
+const envApiKey = readFirebaseEnv('API_KEY');
+const envAuthDomain = readFirebaseEnv('AUTH_DOMAIN');
+const envStorageBucket = readFirebaseEnv('STORAGE_BUCKET');
+const envMessagingSenderId = readFirebaseEnv('MESSAGING_SENDER_ID');
+const envAppId = readFirebaseEnv('APP_ID');
+const envMeasurementId = readFirebaseEnv('MEASUREMENT_ID');
+const envDatabaseId = readFirebaseEnv('FIRESTORE_DATABASE_ID');
+
+const inferredProjectId =
+  envProjectId ||
+  (envAuthDomain &&
+  envAuthDomain !== firebaseConfig.authDomain &&
+  /\.firebaseapp\.com$/i.test(envAuthDomain)
+    ? envAuthDomain.replace(/\.firebaseapp\.com$/i, '')
+    : '');
+
+const isExternalProject = Boolean(inferredProjectId && inferredProjectId !== firebaseConfig.projectId);
+
+if (isExternalProject && !envApiKey) {
+  console.error(
+    `[Firebase Config] Firebase project is set to "${inferredProjectId}", but VITE_FIREBASE_API_KEY is missing. Set all VITE_FIREBASE_* variables from Firebase Console for "${inferredProjectId}".`,
+  );
+}
+
+const resolvedProjectId = inferredProjectId || firebaseConfig.projectId;
+const resolvedAuthDomain = isExternalProject
+  ? envAuthDomain || `${resolvedProjectId}.firebaseapp.com`
+  : envAuthDomain || firebaseConfig.authDomain;
+const resolvedStorageBucket = isExternalProject
+  ? envStorageBucket || `${resolvedProjectId}.firebasestorage.app`
+  : envStorageBucket || firebaseConfig.storageBucket;
+const resolvedMessagingSenderId = isExternalProject
+  ? envMessagingSenderId
+  : envMessagingSenderId || firebaseConfig.messagingSenderId;
+const resolvedMeasurementId = isExternalProject
+  ? envMeasurementId
+  : envMeasurementId || firebaseConfig.measurementId;
+
 const resolvedFirebaseConfig: FirebaseOptions = {
-  apiKey: readEnv('VITE_FIREBASE_API_KEY') || firebaseConfig.apiKey,
-  authDomain: readEnv('VITE_FIREBASE_AUTH_DOMAIN') || firebaseConfig.authDomain,
-  projectId: readEnv('VITE_FIREBASE_PROJECT_ID') || firebaseConfig.projectId,
-  storageBucket: readEnv('VITE_FIREBASE_STORAGE_BUCKET') || firebaseConfig.storageBucket,
-  messagingSenderId:
-    readEnv('VITE_FIREBASE_MESSAGING_SENDER_ID') || firebaseConfig.messagingSenderId,
-  appId: readEnv('VITE_FIREBASE_APP_ID') || firebaseConfig.appId,
-  ...(readEnv('VITE_FIREBASE_MEASUREMENT_ID') || firebaseConfig.measurementId
-    ? {measurementId: readEnv('VITE_FIREBASE_MEASUREMENT_ID') || firebaseConfig.measurementId}
-    : {}),
+  apiKey: isExternalProject ? envApiKey : envApiKey || firebaseConfig.apiKey,
+  authDomain: resolvedAuthDomain,
+  projectId: resolvedProjectId,
+  storageBucket: resolvedStorageBucket,
+  ...(resolvedMessagingSenderId ? {messagingSenderId: resolvedMessagingSenderId} : {}),
+  appId: isExternalProject ? envAppId : envAppId || firebaseConfig.appId,
+  ...(resolvedMeasurementId ? {measurementId: resolvedMeasurementId} : {}),
 };
 
-const resolvedDatabaseId =
-  readEnv('VITE_FIREBASE_FIRESTORE_DATABASE_ID') || firebaseConfig.firestoreDatabaseId;
+const resolvedDatabaseId = isExternalProject
+  ? envDatabaseId || '(default)'
+  : envDatabaseId || firebaseConfig.firestoreDatabaseId || '(default)';
 
 export const FIREBASE_PROJECT_ID = resolvedFirebaseConfig.projectId || firebaseConfig.projectId;
 export const FIREBASE_AUTH_DOMAIN = resolvedFirebaseConfig.authDomain || firebaseConfig.authDomain;
+export const FIREBASE_CONFIG_SOURCE: 'env' | 'firebase-applet-config.json' = isExternalProject
+  ? 'env'
+  : envApiKey || envAuthDomain || envAppId
+    ? 'env'
+    : 'firebase-applet-config.json';
 
 export const firebaseApp = getApps().length > 0 ? getApp() : initializeApp(resolvedFirebaseConfig);
-export const db = getFirestore(firebaseApp, resolvedDatabaseId);
+export const db =
+  resolvedDatabaseId && resolvedDatabaseId !== '(default)'
+    ? getFirestore(firebaseApp, resolvedDatabaseId)
+    : getFirestore(firebaseApp);
 export const auth = getAuth(firebaseApp);
 export const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({prompt: 'select_account'});

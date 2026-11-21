@@ -8,7 +8,13 @@ import {
   updateProfile,
 } from 'firebase/auth';
 import {AlertCircle, CheckCircle2, Mail, Shield, X} from 'lucide-react';
-import {auth, FIREBASE_PROJECT_ID, googleProvider} from '../lib/firebase';
+import {
+  auth,
+  FIREBASE_AUTH_DOMAIN,
+  FIREBASE_CONFIG_SOURCE,
+  FIREBASE_PROJECT_ID,
+  googleProvider,
+} from '../lib/firebase';
 import {getActiveSiteOrigin, getAuthActionCodeSettings} from '../lib/siteConfig';
 import type {Language} from '../types/models';
 
@@ -57,8 +63,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           ? window.location.hostname
           : 'moneycircle-public.vercel.app';
       return lang === 'hi'
-        ? `डोमेन "${host}" Firebase Authentication में अधिकृत नहीं है। Firebase Console → Project "${FIREBASE_PROJECT_ID}" → Authentication → Settings → Authorized domains में "${host}" जोड़ें।`
-        : `Domain "${host}" is not authorized for Firebase Authentication. Add "${host}" in Firebase Console → Project "${FIREBASE_PROJECT_ID}" → Authentication → Settings → Authorized domains.`;
+        ? `डोमेन "${host}" सक्रिय Firebase प्रोजेक्ट "${FIREBASE_PROJECT_ID}" (authDomain: "${FIREBASE_AUTH_DOMAIN}", स्रोत: ${FIREBASE_CONFIG_SOURCE}) में अधिकृत नहीं है। यदि आपका प्रोजेक्ट "moneycircle-5aa03" है, तो Vercel Environment Variables में VITE_FIREBASE_API_KEY, VITE_FIREBASE_AUTH_DOMAIN, VITE_FIREBASE_PROJECT_ID और VITE_FIREBASE_APP_ID सेट करके पुनः डिप्लॉय करें।`
+        : `Domain "${host}" is not authorized for active Firebase project "${FIREBASE_PROJECT_ID}" (authDomain: "${FIREBASE_AUTH_DOMAIN}", source: ${FIREBASE_CONFIG_SOURCE}). If your production project is "moneycircle-5aa03", configure VITE_FIREBASE_API_KEY, VITE_FIREBASE_AUTH_DOMAIN, VITE_FIREBASE_PROJECT_ID, and VITE_FIREBASE_APP_ID in Vercel Environment Variables and redeploy.`;
     }
     if (code === 'auth/popup-blocked') {
       return lang === 'hi'

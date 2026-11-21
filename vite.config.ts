@@ -12,6 +12,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export default defineConfig(() => {
   return {
     base: '/',
+    envPrefix: ['VITE_', 'NEXT_PUBLIC_FIREBASE_', 'REACT_APP_FIREBASE_'],
     build: {
       outDir: 'dist',
       emptyOutDir: true,
