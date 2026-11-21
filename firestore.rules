@@ -281,6 +281,21 @@ service cloud.firestore {
         && data.createdAt is timestamp;
     }
 
+    function isValidAnalyticsEvent(data) {
+      return data.keys().hasAll(['id', 'eventType', 'route', 'viewMode', 'language', 'theme', 'sessionId', 'createdAt'])
+        && data.keys().hasOnly(['id', 'eventType', 'route', 'viewMode', 'language', 'theme', 'sessionId', 'userId', 'referrerHost', 'createdAt'])
+        && isValidId(data.id)
+        && data.eventType in ['PAGE_VIEW']
+        && data.route is string && data.route.size() >= 1 && data.route.size() <= 128
+        && data.viewMode in ['landing', 'user', 'admin']
+        && data.language in ['en', 'hi']
+        && data.theme in ['light', 'dark']
+        && data.sessionId is string && data.sessionId.size() >= 6 && data.sessionId.size() <= 64 && data.sessionId.matches('^[a-zA-Z0-9_\\-]+$')
+        && (!('userId' in data) || isValidId(data.userId))
+        && (!('referrerHost' in data) || (data.referrerHost is string && data.referrerHost.size() <= 120))
+        && data.createdAt is timestamp;
+    }
+
     // 1. users (PII isolated to owner or admin)
     match /users/{userId} {
       allow get: if isValidId(userId) && (isOwner(userId) || isAdmin());
@@ -612,6 +627,20 @@ service cloud.firestore {
     match /auditLogs/{logId} {
       allow get, list: if isAdmin();
       allow create: if isValidId(logId) && isAdmin() && isValidAuditLog(incoming()) && incoming().id == logId && incoming().actorId == request.auth.uid && incoming().createdAt == request.time;
+      allow update, delete: if false;
+    }
+
+    // 15. analytics (append-only page visit telemetry; admin-only reads)
+    match /analytics/{eventId} {
+      allow get, list: if isAdmin();
+      allow create: if isValidId(eventId)
+        && isValidAnalyticsEvent(incoming())
+        && incoming().id == eventId
+        && incoming().createdAt == request.time
+        && (
+          (isSignedIn() && (!('userId' in incoming()) || incoming().userId == request.auth.uid)) ||
+          (!isSignedIn() && !('userId' in incoming()) && incoming().viewMode == 'landing')
+        );
       allow update, delete: if false;
     }
   }

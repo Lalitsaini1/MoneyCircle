@@ -8,6 +8,7 @@ import {
   processWebhookPayload,
   verifySignaturePayload,
 } from './api/_lib/paymentCrypto';
+import {generateRobotsTxt, generateSitemapXml, resolveSiteOrigin} from './api/_lib/sitemap';
 
 dotenv.config();
 
@@ -43,10 +44,24 @@ async function startServer() {
     res.status(result.status).json(result.data);
   });
 
+  app.get('/sitemap.xml', (req, res) => {
+    const origin = resolveSiteOrigin(req);
+    res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    res.status(200).send(generateSitemapXml(origin));
+  });
+
+  app.get('/robots.txt', (req, res) => {
+    const origin = resolveSiteOrigin(req);
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    res.status(200).send(generateRobotsTxt(origin));
+  });
+
   if (process.env.NODE_ENV !== 'production') {
     const {createServer: createViteServer} = await import('vite');
     const vite = await createViteServer({
-      server: {middlewareMode: true},
+      server: {middlewareMode: true, hmr: false},
       appType: 'spa',
     });
     app.use(vite.middlewares);

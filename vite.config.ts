@@ -5,6 +5,7 @@ import path from 'path';
 import {fileURLToPath} from 'url';
 import {defineConfig} from 'vite';
 import {VitePWA} from 'vite-plugin-pwa';
+import {generateRobotsTxt, generateSitemapXml, resolveSiteOrigin} from './api/_lib/sitemap.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -55,7 +56,7 @@ export default defineConfig(() => {
         workbox: {
           maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
           globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2,jpg}'],
-          navigateFallbackDenylist: [/^\/api\//],
+          navigateFallbackDenylist: [/^\/api\//, /^\/sitemap\.xml$/, /^\/robots\.txt$/],
         },
         devOptions: {
           enabled: true,
@@ -80,6 +81,57 @@ export default defineConfig(() => {
           }
         },
       },
+      {
+        name: 'generate-seo-sitemap',
+        configureServer(server) {
+          server.middlewares.use((req, res, next) => {
+            const urlPath = req.url?.split('?')[0];
+            if (urlPath === '/sitemap.xml') {
+              res.statusCode = 200;
+              res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+              res.end(generateSitemapXml(resolveSiteOrigin(req)));
+              return;
+            }
+            if (urlPath === '/robots.txt') {
+              res.statusCode = 200;
+              res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+              res.end(generateRobotsTxt(resolveSiteOrigin(req)));
+              return;
+            }
+            next();
+          });
+        },
+        configurePreviewServer(server) {
+          server.middlewares.use((req, res, next) => {
+            const urlPath = req.url?.split('?')[0];
+            if (urlPath === '/sitemap.xml') {
+              res.statusCode = 200;
+              res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+              res.end(generateSitemapXml(resolveSiteOrigin(req)));
+              return;
+            }
+            if (urlPath === '/robots.txt') {
+              res.statusCode = 200;
+              res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+              res.end(generateRobotsTxt(resolveSiteOrigin(req)));
+              return;
+            }
+            next();
+          });
+        },
+        closeBundle(error?: Error): void {
+          if (error) {
+            return;
+          }
+          const distDir = path.resolve(__dirname, 'dist');
+          if (!fs.existsSync(distDir)) {
+            return;
+          }
+          const origin = resolveSiteOrigin();
+          fs.writeFileSync(path.join(distDir, 'sitemap.xml'), generateSitemapXml(origin), 'utf8');
+          fs.writeFileSync(path.join(distDir, 'robots.txt'), generateRobotsTxt(origin), 'utf8');
+        },
+      },
     ],
     resolve: {
       alias: {
@@ -87,7 +139,7 @@ export default defineConfig(() => {
       },
     },
     server: {
-      hmr: process.env.DISABLE_HMR !== 'true',
+      hmr: false,
       watch: process.env.DISABLE_HMR === 'true' ? null : {},
     },
   };

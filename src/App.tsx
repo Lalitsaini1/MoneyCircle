@@ -17,6 +17,8 @@ import {AuthModal} from './components/AuthModal';
 import {LandingPage} from './components/LandingPage';
 import {OfflineIndicator} from './components/OfflineIndicator';
 import {UserDashboard} from './components/UserDashboard';
+import {useDocumentSeo} from './hooks/useDocumentSeo';
+import {usePageAnalytics} from './hooks/usePageAnalytics';
 import {
   auth,
   BOOTSTRAP_ADMIN_EMAIL,
@@ -27,6 +29,7 @@ import {
   testFirestoreConnection,
 } from './lib/firebase';
 import {DEFAULT_PLATFORM_SETTINGS, seedPlatformCatalogIfEmpty} from './lib/seedData';
+import type {PublicRoutePath} from './lib/seo';
 import type {
   AdminRecord,
   AppNotification,
@@ -48,8 +51,16 @@ import type {
 } from './types/models';
 
 export default function App() {
-  const [lang, setLang] = useState<Language>('en');
+  const [lang, setLang] = useState<Language>(() => {
+    if (typeof window !== 'undefined') {
+      return new URLSearchParams(window.location.search).get('lang') === 'hi' ? 'hi' : 'en';
+    }
+    return 'en';
+  });
   const [theme, setTheme] = useState<ThemeMode>('light');
+  const [pathname, setPathname] = useState<string>(() =>
+    typeof window !== 'undefined' ? window.location.pathname : '/',
+  );
   const [authReady, setAuthReady] = useState(false);
   const [fbUser, setFbUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -91,6 +102,50 @@ export default function App() {
   const [allTickets, setAllTickets] = useState<SupportTicket[]>([]);
   const [allMessages, setAllMessages] = useState<SupportMessage[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+
+  useDocumentSeo({viewMode, pathname, lang, plans});
+  usePageAnalytics({
+    authReady,
+    viewMode,
+    pathname,
+    lang,
+    theme,
+    userId: fbUser?.uid ?? null,
+  });
+
+  useEffect(() => {
+    const onPopState = () => {
+      setPathname(window.location.pathname);
+      const qLang = new URLSearchParams(window.location.search).get('lang');
+      if (qLang === 'hi' || qLang === 'en') {
+        setLang(qLang);
+      }
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
+  const handleLanguageChange = (nextLang: Language) => {
+    setLang(nextLang);
+    if (viewMode === 'landing') {
+      const url = new URL(window.location.href);
+      if (nextLang === 'hi') {
+        url.searchParams.set('lang', 'hi');
+      } else {
+        url.searchParams.delete('lang');
+      }
+      window.history.replaceState({}, '', `${url.pathname}${url.search}`);
+    }
+  };
+
+  const navigatePublicRoute = (path: PublicRoutePath) => {
+    const search = lang === 'hi' ? '?lang=hi' : '';
+    const targetUrl = `${path}${search}`;
+    if (`${window.location.pathname}${window.location.search}` !== targetUrl) {
+      window.history.pushState({}, '', targetUrl);
+      setPathname(path);
+    }
+  };
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
@@ -493,12 +548,14 @@ export default function App() {
           settings={settings}
           isAdmin={isAdmin}
           onSwitchToAdmin={() => setViewMode('admin')}
-          onBackToSite={() => setViewMode('landing')}
+          onBackToSite={() => {
+            setViewMode('landing');
+          }}
         />
       ) : (
         <LandingPage
           lang={lang}
-          setLang={setLang}
+          setLang={handleLanguageChange}
           theme={theme}
           setTheme={setTheme}
           plans={plans}
@@ -506,6 +563,8 @@ export default function App() {
           isAuthenticated={Boolean(fbUser)}
           onOpenAuth={(mode) => setAuthModal({open: true, mode})}
           onOpenDashboard={() => setViewMode(isAdmin ? 'admin' : 'user')}
+          currentPath={pathname}
+          onNavigateRoute={navigatePublicRoute}
         />
       )}
 

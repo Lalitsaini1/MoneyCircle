@@ -209,3 +209,16 @@ export interface AuditLog {
   details: string;
   createdAt: Timestamp;
 }
+
+export interface AnalyticsEvent {
+  id: string;
+  eventType: 'PAGE_VIEW';
+  route: string;
+  viewMode: 'landing' | 'user' | 'admin';
+  language: Language;
+  theme: ThemeMode;
+  sessionId: string;
+  userId?: string;
+  referrerHost?: string;
+  createdAt: Timestamp;
+}

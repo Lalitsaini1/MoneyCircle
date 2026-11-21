@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {
   ArrowRight,
   CheckCircle2,
@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import {t} from '../lib/i18n';
 import {DEFAULT_PLANS} from '../lib/seedData';
+import {normalizePublicRoute, type PublicRoutePath} from '../lib/seo';
 import type {CoinPackage, DayPlan, Language, ThemeMode} from '../types/models';
 import {PWAInstallButton} from './PWAInstallButton';
 
@@ -24,6 +25,8 @@ interface LandingPageProps {
   isAuthenticated: boolean;
   onOpenAuth: (mode: 'login' | 'register') => void;
   onOpenDashboard: () => void;
+  currentPath?: string;
+  onNavigateRoute?: (path: PublicRoutePath) => void;
 }
 
 const HERO_IMG = '/src/assets/images/hero_moneycircle_vault_1795252441688.jpg';
@@ -39,9 +42,44 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   isAuthenticated,
   onOpenAuth,
   onOpenDashboard,
+  currentPath = '/',
+  onNavigateRoute,
 }) => {
   const [heroImgFailed, setHeroImgFailed] = useState(false);
   const [circleImgFailed, setCircleImgFailed] = useState(false);
+  const activeRoute = normalizePublicRoute(currentPath);
+
+  useEffect(() => {
+    const sectionMap: Record<PublicRoutePath, string> = {
+      '/': 'top',
+      '/plans': 'plans',
+      '/rates': 'rates',
+      '/security': 'security',
+      '/support': 'support',
+    };
+    const targetId = sectionMap[activeRoute];
+    if (targetId && targetId !== 'top') {
+      const el = document.getElementById(targetId);
+      if (el) {
+        el.scrollIntoView({behavior: 'smooth', block: 'start'});
+      }
+    }
+  }, [activeRoute]);
+
+  const handleRouteClick = (
+    e: React.MouseEvent<HTMLAnchorElement>,
+    path: PublicRoutePath,
+    sectionId: string,
+  ) => {
+    if (onNavigateRoute) {
+      e.preventDefault();
+      onNavigateRoute(path);
+      const el = document.getElementById(sectionId);
+      if (el) {
+        el.scrollIntoView({behavior: 'smooth', block: 'start'});
+      }
+    }
+  };
 
   const visiblePlans =
     plans.filter((p) => p.isActive).length > 0
@@ -70,35 +108,48 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-8">
           {/* Zone 1: Single-element Brand Wordmark */}
           <a
-            href="#top"
+            href="/"
+            onClick={(e) => handleRouteClick(e, '/', 'top')}
             className="font-display text-xl font-bold tracking-tight text-slate-900 dark:text-white whitespace-nowrap shrink-0"
           >
             {t(lang, 'brand')}
           </a>
 
           {/* Zone 2: 4 Single-line Nav Links */}
-          <nav className="hidden md:flex items-center gap-7 text-sm font-medium text-slate-600 dark:text-slate-300">
+          <nav aria-label="Primary" className="hidden md:flex items-center gap-7 text-sm font-medium text-slate-600 dark:text-slate-300">
             <a
-              href="#plans"
-              className="hover:text-slate-950 dark:hover:text-white hover:underline underline-offset-4 transition-colors whitespace-nowrap shrink-0"
+              href="/plans"
+              onClick={(e) => handleRouteClick(e, '/plans', 'plans')}
+              className={`hover:text-slate-950 dark:hover:text-white hover:underline underline-offset-4 transition-colors whitespace-nowrap shrink-0 ${
+                activeRoute === '/plans' ? 'text-slate-950 dark:text-white underline' : ''
+              }`}
             >
               {t(lang, 'navPlans')}
             </a>
             <a
-              href="#rates"
-              className="hover:text-slate-950 dark:hover:text-white hover:underline underline-offset-4 transition-colors whitespace-nowrap shrink-0"
+              href="/rates"
+              onClick={(e) => handleRouteClick(e, '/rates', 'rates')}
+              className={`hover:text-slate-950 dark:hover:text-white hover:underline underline-offset-4 transition-colors whitespace-nowrap shrink-0 ${
+                activeRoute === '/rates' ? 'text-slate-950 dark:text-white underline' : ''
+              }`}
             >
               {t(lang, 'navRates')}
             </a>
             <a
-              href="#security"
-              className="hover:text-slate-950 dark:hover:text-white hover:underline underline-offset-4 transition-colors whitespace-nowrap shrink-0"
+              href="/security"
+              onClick={(e) => handleRouteClick(e, '/security', 'security')}
+              className={`hover:text-slate-950 dark:hover:text-white hover:underline underline-offset-4 transition-colors whitespace-nowrap shrink-0 ${
+                activeRoute === '/security' ? 'text-slate-950 dark:text-white underline' : ''
+              }`}
             >
               {t(lang, 'navSecurity')}
             </a>
             <a
-              href="#support"
-              className="hover:text-slate-950 dark:hover:text-white hover:underline underline-offset-4 transition-colors whitespace-nowrap shrink-0"
+              href="/support"
+              onClick={(e) => handleRouteClick(e, '/support', 'support')}
+              className={`hover:text-slate-950 dark:hover:text-white hover:underline underline-offset-4 transition-colors whitespace-nowrap shrink-0 ${
+                activeRoute === '/support' ? 'text-slate-950 dark:text-white underline' : ''
+              }`}
             >
               {t(lang, 'navSupport')}
             </a>
@@ -202,7 +253,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   <ArrowRight className="w-4 h-4" />
                 </button>
                 <a
-                  href="#plans"
+                  href="/plans"
+                  onClick={(e) => handleRouteClick(e, '/plans', 'plans')}
                   className="inline-flex items-center gap-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-100 px-6 py-3 text-sm font-semibold transition-colors whitespace-nowrap shrink-0"
                 >
                   <span>{t(lang, 'heroSecondaryCta')}</span>
